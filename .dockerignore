@@ -1,0 +1,31 @@
+# Never bake secrets or the local DB into the image.
+.env
+.env.*
+!.env.example
+
+# Local state / build artifacts
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+cron.log
+
+# SQLite files — persisted via the named volume instead.
+trades.db
+trades.db-shm
+trades.db-wal
+trades.db.bak*
+
+# Editor / git / tooling
+.git/
+.gitignore
+.claude/
+.vscode/
+.idea/
+.DS_Store
+
+# Docker config itself (not needed inside the image)
+Dockerfile
+docker-compose.yml
+.dockerignore

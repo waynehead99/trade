@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Congress Trader — {{ mode|upper }}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="mode-{{ mode }}">
+
+<header>
+  <div class="brand">
+    <h1>Congress Trader</h1>
+    <div class="mode-badge">{{ mode|upper }}</div>
+    <div id="polling-badge" class="polling-badge" title="">—</div>
+  </div>
+  <div class="account-stats">
+    <div class="stat"><span class="label">Buying Power</span><span class="value" id="stat-bp">—</span></div>
+    <div class="stat"><span class="label">Cash</span><span class="value" id="stat-cash">—</span></div>
+    <div class="stat"><span class="label">Equity</span><span class="value" id="stat-equity">—</span></div>
+    <div class="stat"><span class="label">Portfolio</span><span class="value" id="stat-portfolio">—</span></div>
+    <div class="stat"><span class="label">Day P/L</span><span class="value" id="stat-daypl">—</span></div>
+    <div class="stat"><span class="label">Day Trades</span><span class="value" id="stat-dt">—</span></div>
+  </div>
+</header>
+
+<div id="pdt-banner" class="banner warn" hidden></div>
+<div id="market-banner" class="banner warn" hidden></div>
+
+<main>
+  <section class="full" id="progress-section">
+    <h2>
+      Equity Progress <span id="progress-stats" class="subtle"></span>
+      <span class="progress-periods">
+        <button type="button" data-period="1D" class="ghost">1D</button>
+        <button type="button" data-period="1W" class="ghost">1W</button>
+        <button type="button" data-period="1M" class="ghost active">1M</button>
+        <button type="button" data-period="3M" class="ghost">3M</button>
+        <button type="button" data-period="1Y" class="ghost">1Y</button>
+        <button type="button" data-period="all" class="ghost">All</button>
+      </span>
+    </h2>
+    <div id="progress-chart"></div>
+  </section>
+
+  <section>
+    <h2>Positions</h2>
+    <table>
+      <thead><tr>
+        <th>Symbol</th>
+        <th class="num">Qty</th>
+        <th>Acquired</th>
+        <th class="num">Entry</th>
+        <th class="num">Current</th>
+        <th class="num">Value</th>
+        <th class="num">P/L</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="positions-tbody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Open Orders</h2>
+    <table>
+      <thead><tr>
+        <th>Symbol</th>
+        <th>Side</th>
+        <th>Type</th>
+        <th class="num">Qty</th>
+        <th class="num">Trail / Limit</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="orders-tbody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Actions</h2>
+
+    <div class="action-card">
+      <h3>Manual Buy <span class="subtle">— market order + trailing stop sell</span></h3>
+      <form id="buy-form">
+        <label>Symbol<input id="buy-symbol" placeholder="AAPL" required></label>
+        <label>Qty<input id="buy-qty" type="number" min="1" step="1" value="1" required></label>
+        <label>Trail %<input id="buy-trail" type="number" step="0.1" min="0.1" value="5.0" required></label>
+        <button type="submit">Buy</button>
+      </form>
+    </div>
+
+    <div class="action-card">
+      <h3>Mirror Congress Buys <span class="subtle">— dedupe by ticker, skip already-held, budget-capped</span></h3>
+      <form id="mirror-form">
+        <label>Days<input id="mirror-days" type="number" min="1" value="15"></label>
+        <label>Qty / ticker<input id="mirror-qty" type="number" min="1" step="1" value="1"></label>
+        <label>Trail %<input id="mirror-trail" type="number" step="0.1" min="0.1" value="5.0"></label>
+        <label>Max spend $<input id="mirror-max-spend" type="number" min="1" step="1" placeholder="optional"></label>
+        <button type="submit">Run Mirror</button>
+      </form>
+    </div>
+  </section>
+
+  <section>
+    <h2>Log <button type="button" id="clear-log-btn" class="ghost">clear</button></h2>
+    <pre id="log">Ready.</pre>
+  </section>
+
+  <section class="full">
+    <h2>
+      Sell History <span id="sell-stats-line" class="subtle"></span>
+      <button type="button" id="sync-history-btn" class="ghost">sync</button>
+    </h2>
+    <form id="history-filters">
+      <label>Side
+        <select id="history-side">
+          <option value="sell" selected>Sells</option>
+          <option value="buy">Buys</option>
+          <option value="all">All</option>
+        </select>
+      </label>
+      <label>Days<input id="history-days" type="number" min="1" placeholder="all"></label>
+      <label>Symbol<input id="history-symbol" placeholder="any"></label>
+    </form>
+    <table>
+      <thead><tr>
+        <th>Filled / Canceled</th>
+        <th>Symbol</th>
+        <th>Side</th>
+        <th>Type</th>
+        <th class="num">Qty</th>
+        <th class="num">Fill Price</th>
+        <th class="num">Value</th>
+        <th>Status</th>
+      </tr></thead>
+      <tbody id="history-tbody"></tbody>
+    </table>
+  </section>
+
+  <section class="full">
+    <h2>Congress Trades <span id="stats-line" class="subtle"></span></h2>
+    <form id="congress-filters">
+      <label>Mode
+        <select id="congress-mode">
+          <option value="all">All</option>
+          <option value="buys" selected>Buys only</option>
+          <option value="sells">Sells only</option>
+        </select>
+      </label>
+      <label>Days<input id="congress-days" type="number" min="1" value="15"></label>
+      <button type="button" id="refresh-congress-btn" class="secondary">Refresh from Capitol Trades</button>
+    </form>
+    <table>
+      <thead><tr>
+        <th>Tx Date</th>
+        <th>Pub Date</th>
+        <th>Type</th>
+        <th>Ticker</th>
+        <th>Politician</th>
+        <th class="num">Value</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="congress-tbody"></tbody>
+    </table>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

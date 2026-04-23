@@ -1,0 +1,203 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  background: #0d1117;
+  color: #c9d1d9;
+}
+
+body.mode-live { --accent: #c93c3c; --accent-bg: linear-gradient(90deg, #3d0000 0%, #1a0000 100%); }
+body.mode-paper { --accent: #2ea043; --accent-bg: linear-gradient(90deg, #002d1e 0%, #001a10 100%); }
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 14px 24px;
+  background: var(--accent-bg);
+  border-bottom: 2px solid var(--accent);
+  flex-wrap: wrap;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+
+h1 { font-size: 17px; margin: 0; font-weight: 600; }
+h2 { font-size: 13px; margin: 0 0 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; justify-content: space-between; }
+h3 { font-size: 13px; margin: 0 0 8px; color: #c9d1d9; font-weight: 600; }
+
+.mode-badge {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  background: var(--accent);
+  color: white;
+}
+
+.polling-badge {
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  cursor: help;
+}
+.polling-badge.active { background: #2ea043; color: white; }
+.polling-badge.paused { background: #30363d; color: #8b949e; }
+
+.account-stats { display: flex; gap: 24px; margin-left: auto; flex-wrap: wrap; }
+.stat { display: flex; flex-direction: column; min-width: 90px; }
+.stat .label { color: #8b949e; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.stat .value { font-size: 16px; font-weight: 600; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+
+.banner { padding: 10px 16px; margin: 12px 16px 0; border-radius: 6px; font-size: 13px; }
+.banner.warn { background: #3d2e00; border: 1px solid #9e6a03; color: #e3b341; }
+
+main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px;
+}
+
+section {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 14px 16px;
+}
+section.full { grid-column: 1 / -1; }
+
+.subtle { color: #8b949e; font-weight: 400; font-size: 11px; text-transform: none; letter-spacing: 0; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+th { text-align: left; padding: 6px 8px; border-bottom: 1px solid #30363d; color: #8b949e; font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+td { padding: 6px 8px; border-bottom: 1px solid #21262d; }
+td.num, th.num { text-align: right; }
+tr:last-child td { border-bottom: 0; }
+
+.empty { text-align: center; color: #8b949e; padding: 18px; font-family: -apple-system, sans-serif; }
+
+.pos { color: #3fb950; }
+.neg { color: #f85149; }
+.warn-text { color: #e3b341; }
+
+button {
+  background: var(--accent, #238636);
+  color: white;
+  border: 0;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+}
+body.mode-live button[type="submit"] { background: #da3633; }
+body.mode-paper button[type="submit"] { background: #238636; }
+button:hover { filter: brightness(1.15); }
+button.danger { background: #da3633; }
+button.secondary { background: #30363d; }
+button.ghost { background: transparent; color: #8b949e; padding: 2px 8px; font-size: 11px; }
+button.ghost:hover { color: #c9d1d9; filter: none; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+input, select {
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+}
+input:focus, select:focus { outline: 0; border-color: #58a6ff; }
+
+form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+label { display: flex; flex-direction: column; gap: 3px; font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+label input, label select { width: 110px; text-transform: none; letter-spacing: 0; font-family: "SF Mono", ui-monospace, monospace; }
+
+.action-card { padding: 14px 0; border-top: 1px solid #21262d; }
+.action-card:first-of-type { border-top: 0; padding-top: 0; }
+
+#log {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 12px;
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  margin: 0;
+  color: #c9d1d9;
+}
+
+.row-action { text-align: right; }
+.row-action button { padding: 3px 10px; font-size: 12px; }
+
+#congress-tbody tr:hover { background: #1c2128; }
+.ticker-cell { font-weight: 600; }
+
+/* Equity progress chart */
+.progress-periods { display: inline-flex; gap: 2px; margin-left: auto; }
+.progress-periods button {
+  padding: 3px 10px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  background: transparent;
+  color: #8b949e;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+}
+.progress-periods button:hover { color: #c9d1d9; filter: none; background: #1c2128; }
+.progress-periods button.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+.chart-svg {
+  width: 100%;
+  height: 240px;
+  display: block;
+}
+#progress-chart { margin-top: 12px; min-height: 240px; position: relative; }
+#progress-chart .empty { padding: 90px 0; }
+
+.chart-hitbox { cursor: crosshair; }
+
+.chart-tooltip {
+  position: absolute;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  min-width: 160px;
+  line-height: 1.3;
+}
+.chart-tooltip[hidden] { display: none; }
+.chart-tooltip .tip-date {
+  color: #8b949e;
+  font-size: 10px;
+  margin-bottom: 2px;
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  letter-spacing: 0.3px;
+}
+.chart-tooltip .tip-equity {
+  font-size: 15px;
+  font-weight: 600;
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+}
+.chart-tooltip .tip-pl {
+  font-size: 11px;
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  margin-top: 2px;
+}
+

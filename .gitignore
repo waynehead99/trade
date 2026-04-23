@@ -1,0 +1,27 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Local SQLite DB (persisted via Docker volume or locally)
+trades.db
+trades.db-shm
+trades.db-wal
+trades.db.bak*
+
+# Logs
+*.log
+cron.log
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor / tooling
+.claude/
+.vscode/
+.idea/
+.DS_Store
+node_modules/
