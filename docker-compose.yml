@@ -1,9 +1,14 @@
 services:
   congress-trader:
+    # Prebuilt image published by .github/workflows/docker.yml on every push to main.
+    # For local dev you can build instead by running:
+    #   docker compose build
+    # which will use the Dockerfile in this directory (the `build:` block below).
+    image: ghcr.io/waynehead99/trade:latest
     build: .
-    image: congress-trader:latest
     container_name: congress-trader
     restart: unless-stopped
+    pull_policy: always
 
     # Secrets resolved via variable substitution. Set these either in a local
     # .env alongside this file (docker compose picks it up automatically) or
