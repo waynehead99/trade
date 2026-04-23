@@ -28,47 +28,13 @@ services:
     volumes:
       - trades_data:/data
 
-    # No host port mapping — the UI is only reachable via Traefik + Authentik
-    # forward-auth on the shared network below. For local dev without Traefik,
-    # uncomment this (binds to localhost on the host only):
-    # ports:
-    #   - "127.0.0.1:5000:5000"
-
-    networks:
-      - traefik
-
-    labels:
-      traefik.enable: "true"
-      # Tell Traefik which network to use when it reaches this container.
-      traefik.docker.network: traefik
-
-      # --- Router ---
-      # Change trader.example.com to your actual hostname.
-      traefik.http.routers.congress-trader.rule: "Host(`trader.eriksononline.com`)"
-      traefik.http.routers.congress-trader.entrypoints: "websecure"
-      traefik.http.routers.congress-trader.tls: "true"
-      # Match the cert resolver name configured in your Traefik static config.
-      traefik.http.routers.congress-trader.tls.certresolver: "letsencrypt"
-
-      # --- Authentik forward-auth middleware ---
-      # Middleware reference format is <name>@<provider>. If your Authentik
-      # middleware is defined in a Traefik file provider it's typically
-      # "authentik@file"; if defined on the authentik-proxy container via
-      # Docker labels it's "authentik@docker". Adjust to match your setup.
-      traefik.http.routers.congress-trader.middlewares: "authentik@file"
-
-      # --- Service ---
-      traefik.http.services.congress-trader.loadbalancer.server.port: "5000"
-
-networks:
-  # Shared network for Traefik + Authentik outpost + this service.
-  # This stack will create the network on first deploy. If your Traefik stack
-  # already owns a proxy network, switch to:
-  #   external: true
-  #   name: <your-traefik-network-name>
-  # and remove the `name:` line below.
-  traefik:
-    name: traefik
+    # Published so Traefik (running on a different host) can reach it over the
+    # LAN. The UI itself has no auth — rely on Traefik + Authentik forward-auth
+    # to gate access, and restrict port 5000 at the firewall to your Traefik
+    # host's IP only. Otherwise anyone on your LAN hitting port 5000 directly
+    # bypasses authentication.
+    ports:
+      - "5000:5000"
 
 volumes:
   trades_data:
