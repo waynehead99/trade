@@ -5,12 +5,15 @@ services:
     container_name: congress-trader
     restart: unless-stopped
 
-    # Secrets + mode come from an .env file on the host (never baked into the image).
-    # In Portainer, you can either mount .env via env_file or paste variables into
-    # the stack UI under "Environment variables".
-    env_file:
-      - .env
+    # Secrets resolved via variable substitution. Set these either in a local
+    # .env alongside this file (docker compose picks it up automatically) or
+    # in Portainer's stack "Environment variables" UI for git-based deploys.
     environment:
+      ALPACA_API_KEY: ${ALPACA_API_KEY}
+      ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY}
+      PROD_ALPACA_API_KEY: ${PROD_ALPACA_API_KEY:-}
+      PROD_ALPACA_SECRET_KEY: ${PROD_ALPACA_SECRET_KEY:-}
+      ALPACA_PAPER: ${ALPACA_PAPER:-true}
       DB_PATH: /data/trades.db
       HOST: 0.0.0.0
       PORT: "5000"
