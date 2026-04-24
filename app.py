@@ -375,6 +375,71 @@ _TIMEFRAME_FOR_PERIOD = {
 }
 
 
+DEFAULT_MARKET_SYMBOLS = "SPY,QQQ,DIA,IWM"
+_MARKET_LABELS = {
+    "SPY": "S&P 500",
+    "QQQ": "Nasdaq 100",
+    "DIA": "Dow 30",
+    "IWM": "Russell 2000",
+    "VIXY": "Volatility",
+    "TLT": "20Y Treasuries",
+    "GLD": "Gold",
+    "UUP": "US Dollar",
+}
+
+
+@app.route("/api/market/snapshots")
+def api_market_snapshots():
+    """Multi-symbol snapshot for a broad-market glance strip.
+
+    Defaults to the four major index ETFs. Callers can override with
+    ?symbols=SPY,QQQ,...  — used by the Markets widget in the UI.
+    """
+    symbols = request.args.get("symbols", DEFAULT_MARKET_SYMBOLS).upper()
+    headers = {
+        "APCA-API-KEY-ID": ALPACA_API_KEY,
+        "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY,
+    }
+    try:
+        resp = requests.get(
+            "https://data.alpaca.markets/v2/stocks/snapshots",
+            headers=headers,
+            params={"symbols": symbols},
+            timeout=10,
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+    if resp.status_code != 200:
+        return jsonify({"error": resp.text}), resp.status_code
+
+    out = []
+    for sym, snap in (resp.json() or {}).items():
+        latest = (snap.get("latestTrade") or {}).get("p")
+        daily = snap.get("dailyBar") or {}
+        prev = snap.get("prevDailyBar") or {}
+        last = latest if latest is not None else daily.get("c")
+        prev_close = prev.get("c")
+        change = (last - prev_close) if (last is not None and prev_close) else None
+        change_pct = (change / prev_close * 100) if (change is not None and prev_close) else None
+        out.append({
+            "symbol": sym,
+            "label": _MARKET_LABELS.get(sym, sym),
+            "last": last,
+            "prev_close": prev_close,
+            "open": daily.get("o"),
+            "high": daily.get("h"),
+            "low": daily.get("l"),
+            "volume": daily.get("v"),
+            "change": change,
+            "change_pct": change_pct,
+            "as_of": (snap.get("latestTrade") or {}).get("t"),
+        })
+    # Preserve the requested symbol order
+    order = {s: i for i, s in enumerate(symbols.split(","))}
+    out.sort(key=lambda r: order.get(r["symbol"], 999))
+    return jsonify(out)
+
+
 @app.route("/api/portfolio-history")
 def api_portfolio_history():
     """Proxy Alpaca's /v2/account/portfolio/history — equity time series for the chart."""

@@ -157,6 +157,43 @@ async function refreshOrders() {
   }
 }
 
+// ---- Markets strip -------------------------------------------------------
+// Snapshot tiles for broad-market ETFs. Polled alongside refreshAll so it
+// respects the active-window gate — when polling is paused, tiles just hold
+// the last values they had.
+
+async function refreshMarkets() {
+  try {
+    const tiles = await api("/api/market/snapshots");
+    const el = $("#markets-tiles");
+    if (!Array.isArray(tiles) || !tiles.length) {
+      el.innerHTML = '<div class="empty">No market data.</div>';
+      return;
+    }
+    el.innerHTML = tiles
+      .map((t) => {
+        const c = cls(t.change);
+        const sign = t.change != null && t.change >= 0 ? "+" : "";
+        const last = t.last != null ? fmtMoney(t.last) : "—";
+        const chg = t.change != null ? `${sign}${fmtMoney(t.change)}` : "—";
+        const pct = t.change_pct != null ? `${sign}${t.change_pct.toFixed(2)}%` : "—";
+        return `
+          <div class="market-tile ${c}">
+            <div class="mt-head">
+              <span class="mt-sym">${t.symbol}</span>
+              <span class="mt-lbl">${t.label || ""}</span>
+            </div>
+            <div class="mt-last">${last}</div>
+            <div class="mt-change ${c}">${chg} <span class="mt-pct">${pct}</span></div>
+          </div>
+        `;
+      })
+      .join("");
+  } catch (e) {
+    console.error("markets refresh failed:", e);
+  }
+}
+
 // ---- Equity progress chart ----------------------------------------------
 
 let currentPeriod = "1M";
@@ -580,6 +617,7 @@ function refreshAll() {
   refreshAccount();
   refreshPositions();
   refreshOrders();
+  refreshMarkets();
 }
 
 // ---- Active-window gating -------------------------------------------------
