@@ -174,13 +174,21 @@ async function refreshMarkets() {
       .map((t) => {
         const c = cls(t.change);
         const sign = t.change != null && t.change >= 0 ? "+" : "";
-        const last = t.last != null ? fmtMoney(t.last) : "—";
-        const chg = t.change != null ? `${sign}${fmtMoney(t.change)}` : "—";
+        // Indexes have prices in the thousands with commas; ETFs have $ amounts.
+        // Detect by symbol prefix — ^ indicates a Yahoo-sourced index.
+        const isIndex = (t.symbol || "").startsWith("^");
+        const fmtLevel = (n) =>
+          n == null
+            ? "—"
+            : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const last = isIndex ? fmtLevel(t.last) : fmtMoney(t.last);
+        const chg = t.change != null ? `${sign}${isIndex ? fmtLevel(t.change) : fmtMoney(t.change)}` : "—";
         const pct = t.change_pct != null ? `${sign}${t.change_pct.toFixed(2)}%` : "—";
+        const display = t.display_symbol || t.symbol;
         return `
           <div class="market-tile ${c}">
             <div class="mt-head">
-              <span class="mt-sym">${t.symbol}</span>
+              <span class="mt-sym">${display}</span>
               <span class="mt-lbl">${t.label || ""}</span>
             </div>
             <div class="mt-last">${last}</div>

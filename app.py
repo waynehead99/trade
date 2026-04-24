@@ -375,69 +375,128 @@ _TIMEFRAME_FOR_PERIOD = {
 }
 
 
-DEFAULT_MARKET_SYMBOLS = "SPY,QQQ,DIA,IWM"
+DEFAULT_MARKET_SYMBOLS = "^DJI,^IXIC,^GSPC,^RUT"
 _MARKET_LABELS = {
-    "SPY": "S&P 500",
-    "QQQ": "Nasdaq 100",
-    "DIA": "Dow 30",
-    "IWM": "Russell 2000",
-    "VIXY": "Volatility",
-    "TLT": "20Y Treasuries",
-    "GLD": "Gold",
-    "UUP": "US Dollar",
+    "^DJI":  "Dow Jones",
+    "^IXIC": "Nasdaq",
+    "^GSPC": "S&P 500",
+    "^RUT":  "Russell 2000",
+    "^VIX":  "VIX",
+    "SPY":   "S&P 500 ETF",
+    "QQQ":   "Nasdaq 100 ETF",
+    "DIA":   "Dow 30 ETF",
+    "IWM":   "Russell 2000 ETF",
+    "VIXY":  "Volatility",
+    "TLT":   "20Y Treasuries",
+    "GLD":   "Gold",
+    "UUP":   "US Dollar",
+}
+_MARKET_DISPLAY = {
+    "^DJI":  "DOW",
+    "^IXIC": "NASDAQ",
+    "^GSPC": "S&P 500",
+    "^RUT":  "RUSSELL",
+    "^VIX":  "VIX",
 }
 
 
-@app.route("/api/market/snapshots")
-def api_market_snapshots():
-    """Multi-symbol snapshot for a broad-market glance strip.
+def _row(symbol: str, last, prev_close, daily=None, as_of=None) -> dict:
+    daily = daily or {}
+    change = (last - prev_close) if (last is not None and prev_close) else None
+    change_pct = (change / prev_close * 100) if (change is not None and prev_close) else None
+    return {
+        "symbol": symbol,
+        "display_symbol": _MARKET_DISPLAY.get(symbol, symbol),
+        "label": _MARKET_LABELS.get(symbol, symbol),
+        "last": last,
+        "prev_close": prev_close,
+        "open": daily.get("o"),
+        "high": daily.get("h"),
+        "low": daily.get("l"),
+        "volume": daily.get("v"),
+        "change": change,
+        "change_pct": change_pct,
+        "as_of": as_of,
+    }
 
-    Defaults to the four major index ETFs. Callers can override with
-    ?symbols=SPY,QQQ,...  — used by the Markets widget in the UI.
-    """
-    symbols = request.args.get("symbols", DEFAULT_MARKET_SYMBOLS).upper()
+
+def _fetch_alpaca_etfs(symbols: list[str]) -> list[dict]:
+    """Alpaca's /v2/stocks/snapshots for tradable ETF/stock symbols."""
+    if not symbols:
+        return []
     headers = {
         "APCA-API-KEY-ID": ALPACA_API_KEY,
         "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY,
     }
-    try:
-        resp = requests.get(
-            "https://data.alpaca.markets/v2/stocks/snapshots",
-            headers=headers,
-            params={"symbols": symbols},
-            timeout=10,
-        )
-    except Exception as e:
-        return jsonify({"error": str(e)}), 502
-    if resp.status_code != 200:
-        return jsonify({"error": resp.text}), resp.status_code
-
+    resp = requests.get(
+        "https://data.alpaca.markets/v2/stocks/snapshots",
+        headers=headers,
+        params={"symbols": ",".join(symbols)},
+        timeout=10,
+    )
+    resp.raise_for_status()
     out = []
     for sym, snap in (resp.json() or {}).items():
         latest = (snap.get("latestTrade") or {}).get("p")
         daily = snap.get("dailyBar") or {}
         prev = snap.get("prevDailyBar") or {}
         last = latest if latest is not None else daily.get("c")
-        prev_close = prev.get("c")
-        change = (last - prev_close) if (last is not None and prev_close) else None
-        change_pct = (change / prev_close * 100) if (change is not None and prev_close) else None
-        out.append({
-            "symbol": sym,
-            "label": _MARKET_LABELS.get(sym, sym),
-            "last": last,
-            "prev_close": prev_close,
-            "open": daily.get("o"),
-            "high": daily.get("h"),
-            "low": daily.get("l"),
-            "volume": daily.get("v"),
-            "change": change,
-            "change_pct": change_pct,
-            "as_of": (snap.get("latestTrade") or {}).get("t"),
-        })
-    # Preserve the requested symbol order
-    order = {s: i for i, s in enumerate(symbols.split(","))}
-    out.sort(key=lambda r: order.get(r["symbol"], 999))
-    return jsonify(out)
+        out.append(_row(sym, last, prev.get("c"), daily, (snap.get("latestTrade") or {}).get("t")))
+    return out
+
+
+def _fetch_yahoo_index(symbol: str) -> dict | None:
+    """Unofficial Yahoo chart API — only path I know of for real index levels.
+
+    Alpaca's stock API doesn't serve non-tradable indexes (^DJI, ^IXIC, etc.)
+    so we fall through to Yahoo for those. No auth; requires a browser-ish
+    User-Agent because Yahoo blocks python-requests' default.
+    """
+    try:
+        resp = requests.get(
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}",
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        result = (resp.json().get("chart") or {}).get("result") or []
+        if not result:
+            return None
+        meta = result[0].get("meta") or {}
+    except Exception as e:
+        print(f"[markets] yahoo fetch failed for {symbol}: {e}")
+        return None
+    last = meta.get("regularMarketPrice")
+    prev = meta.get("chartPreviousClose") or meta.get("previousClose")
+    return _row(symbol, last, prev)
+
+
+@app.route("/api/market/snapshots")
+def api_market_snapshots():
+    """Multi-symbol market snapshot for the UI strip.
+
+    Smart dispatch: symbols starting with '^' are indexes (non-tradable) and
+    are fetched from Yahoo Finance; everything else is a regular stock/ETF
+    and goes through Alpaca. Results are returned in the requested order.
+    """
+    requested = [s.strip() for s in request.args.get("symbols", DEFAULT_MARKET_SYMBOLS).split(",") if s.strip()]
+    indexes = [s for s in requested if s.startswith("^")]
+    etfs = [s.upper() for s in requested if not s.startswith("^")]
+
+    rows: list[dict] = []
+    if etfs:
+        try:
+            rows.extend(_fetch_alpaca_etfs(etfs))
+        except Exception as e:
+            return jsonify({"error": f"alpaca snapshot failed: {e}"}), 502
+    for sym in indexes:
+        row = _fetch_yahoo_index(sym)
+        if row is not None:
+            rows.append(row)
+
+    order = {s: i for i, s in enumerate(requested)}
+    rows.sort(key=lambda r: order.get(r["symbol"], 999))
+    return jsonify(rows)
 
 
 @app.route("/api/portfolio-history")
